@@ -61,6 +61,7 @@ d ,theta ,r ,alpha        ,type     , color
 #### Python
 
 For the sake of making calculations involving `pi` easier, Python files are supported.
+
 > Beware: dh2vrml will blindly import and run whatever code is provided, always inspect the contents of the file before importing
 
 ```py

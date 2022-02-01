@@ -1,8 +1,12 @@
 [tool.poetry]
 name = "dh2vrml"
-version = "0.1.0"
+version = "0.1.1"
 description = "Library and CLI tool to convert Denavit–Hartenberg parameters to an X3D model"
 authors = ["Jasper Chan <jasperchan515@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Gigahawk/dh2vrml"
+repository = "https://github.com/Gigahawk/dh2vrml"
 
 [tool.poetry.dependencies]
 python = "^3.8"

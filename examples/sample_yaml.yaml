@@ -1,0 +1,20 @@
+- type: revolute
+  d: 1.5
+  theta: 0
+  r: 3
+  alpha: 0
+  color: [1, 0, 0]
+
+- type: revolute
+  d: 2
+  theta: 0
+  r: 4
+  alpha: 3.14159265359
+  color: [0, 0, 1]
+
+- type: prismatic
+  d: 3
+  theta: 0
+  r: 0
+  alpha: 0
+  color: [1, 0, 1]

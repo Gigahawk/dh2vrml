@@ -16,7 +16,19 @@ from dh2vrml.dhparams import DhParams, JointType
 
 
 UNIT_LENGTH = 1
+# Keep track of last unit length for link extrusion calculations
+PREV_UL = UNIT_LENGTH
 UL = UNIT_LENGTH
+
+def update_ul(new_ul: float):
+    global UL, PREV_UL
+    PREV_UL = UL
+    UL = new_ul
+
+def reset_ul():
+    global UL
+    UL = UNIT_LENGTH
+    PREV_UL = UNIT_LENGTH
 
 def revolute_joint(color : Tuple[float, float, float]) -> Transform:
     """Return a cylinder axial along the Z axis
@@ -141,13 +153,13 @@ def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, colo
     final_point = tuple(final_point[0:3].transpose().tolist()[0])
     extrusion_spine = [
         (0, 0, 0),  # Start extrusion at center of joint
-        (0, 0, 1.5*UL),  # Extrusion protrudes up in the Z axis out of joint
+        (0, 0, 1.5*PREV_UL),  # Extrusion protrudes up in the Z axis out of joint
     ]
     if final_point[-1] <= 0:
         # Wrap link body around joint if next joint is lower
         extrusion_spine.extend([
-            (UL, 0, 1.5*UL),
-            (UL, 0, 0),
+            (PREV_UL, 0, 1.5*PREV_UL),
+            (PREV_UL, 0, 0),
         ])
     extrusion_spine.append(final_point)
 
@@ -255,20 +267,34 @@ def base_model(base_joint : JointType) -> X3D:
 
 
 def build_x3d(params : DhParams) -> X3D:
+    global UL
     parameters = params.params
+    scale = params.scale
     colors = params.colors
     joint_types = params.joint_types
     base_joint = joint_types.pop(0)
+
+    if scale[0] is not None:
+        update_ul(scale[0])
+    else:
+        reset_ul()
     joint_types.append(JointType.END_EFFECTOR)
     model = base_model(base_joint)
     ptr = model.Scene
 
     last_joint_type = base_joint
-    for idx, (p, j, c) in enumerate(zip(parameters, joint_types, colors)):
+    for idx, (p, j, c, s) in enumerate(zip(parameters, joint_types, colors, scale)):
+        if s is not None:
+            update_ul(s)
+        else:
+            update_ul(UL)
         # link 0 is the base "link"
         link_idx = idx + 1
         link, new_ptr = get_link(link_idx, p.d, p.theta, p.r, p.alpha, j, last_joint_type, c)
         ptr.children.append(link)
         ptr = new_ptr
         last_joint_type = j
+
+    # Return UL to original length
+    reset_ul()
     return model

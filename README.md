@@ -22,6 +22,12 @@ dh2vrml -f <file_name>
 - `color`: Color of the joint and link at index `i`, in RGB format
     - Values are floats ranging from 0 to 1
     - The end effector is always colored `(0, 1, 1)`, (cyan)
+- `scale`: The relative size of joints and links
+    - Links are scaled cross sectionally (position is not affected)
+    - Joints are scaled volumetrically
+    - The first value scales both the base joint and the joint after it
+    - If no value is provided, the last provided value is used
+        - Scale of the model can be set globally by only providing `scale` for the first set of parameters
 
 ### Supported file types
 

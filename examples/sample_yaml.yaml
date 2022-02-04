@@ -4,6 +4,7 @@
   r: 3
   alpha: 0
   color: [1, 0, 0]
+  scale: 1.5
 
 - type: revolute
   d: 2
@@ -11,6 +12,7 @@
   r: 4
   alpha: 3.14159265359
   color: [0, 0, 1]
+  scale: 0.5
 
 - type: prismatic
   d: 3

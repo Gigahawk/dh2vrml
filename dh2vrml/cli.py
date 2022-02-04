@@ -8,7 +8,7 @@ from dh2vrml.exporter import build_x3d
 @click.command()
 @click.option(
     '-f', '--file', default=None, multiple=True,
-    help='DH Parameter file (.yaml, .csv)'
+    help='DH Parameter file (.yaml, .csv, .py)'
 )
 def main(file : Tuple[str, ...]):
     for f in file:

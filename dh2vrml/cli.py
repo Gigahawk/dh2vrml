@@ -36,13 +36,16 @@ def get_params_from_file(f: str) -> DhParams:
         exit(1)
     return params
 
-def write_x3d_file(file_name: str, params: DhParams) -> str:
+def write_x3d_file(file_name: str, params: DhParams, validate: bool=True) -> str:
     file_name = os.path.basename(file_name)
     name, ext = os.path.splitext(file_name)
     model = build_x3d(params)
-    print("Checking XML serialization...")
     modelXML= model.XML()
-    model.XMLvalidate()
+    if validate:
+        print("Checking XML serialization...")
+        model.XMLvalidate()
+    else:
+        print("Skipping model validation")
     out_name = f"{name}.x3d"
     print(f"Writing output to {out_name}")
     with open(out_name, "w") as f:
@@ -58,18 +61,23 @@ def write_x3d_file(file_name: str, params: DhParams) -> str:
     '-s', '--stdin', default=None,
     help='Read input from stdin, specify filetype to parse as (yaml, csv, py)'
 )
+@click.option(
+    '--validate/--no-validate', default=True,
+    help='Enable/disable validation of X3D output, (requires internet)'
+)
 def main(
         file : Union[Tuple[str, ...], None],
-        stdin : Union[str, None]
+        stdin : Union[str, None],
+        validate : bool
         ) -> List[str]:
     out = []
     if stdin:
         params = get_params_from_stdin(stdin)
-        out.append(write_x3d_file(str(uuid.uuid1()), params))
+        out.append(write_x3d_file(str(uuid.uuid1()), params, validate))
 
     for f in file:
         params = get_params_from_file(f)
-        out.append(write_x3d_file(f, params))
+        out.append(write_x3d_file(f, params, validate))
 
     return out
 

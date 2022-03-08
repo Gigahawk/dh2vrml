@@ -1,3 +1,3 @@
-d ,theta ,r ,alpha        ,type     , color ,scale
-2 ,0     ,0 ,1.5707963268 ,revolute , 1 0 0 ,0.7
-0 ,0     ,2 ,0            ,revolute ,       ,
+d ,theta ,r ,alpha        ,type     ,color ,scale ,offset
+2 ,0     ,0 ,1.5707963268 ,revolute ,1 0 0 ,0.7   ,0 0 -1
+0 ,0     ,2 ,0            ,revolute ,      ,

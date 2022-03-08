@@ -28,13 +28,17 @@ dh2vrml -f <file_name>
     - The first value scales both the base joint and the joint after it
     - If no value is provided, the last provided value is used
         - Scale of the model can be set globally by only providing `scale` for the first set of parameters
+- `offset`: Location to render joint relative to coordinate system (X, Y, Z)
+    - This value is NOT affected by `scale`
+    - Defaults to `(0, 0, 0)` 
+    - Revolute joints can only have a Z offset
 
 ### Supported file types
 
 #### YAML
 
 ```yaml
-- type: revolute  
+- type: revolute
   d: 1.5
   theta: 0
   r: 3

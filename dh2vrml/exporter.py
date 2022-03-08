@@ -54,7 +54,7 @@ def revolute_joint(color : Tuple[float, float, float]) -> Transform:
         ]
     )
 
-def prismatic_joint(color : Tuple[float, float, float]) -> Shape: 
+def prismatic_joint(color : Tuple[float, float, float]) -> Shape:
     return Shape(
         geometry=Box(
             size=(UL, UL, 2*UL)
@@ -79,7 +79,7 @@ def link_cross_section() -> List[Tuple[float, float]]:
     cross_section.append((radius*np.cos(0), radius*np.sin(0),))
     return cross_section
 
-def end_effector(color : Tuple[float, float, float]) -> Shape: 
+def end_effector(color : Tuple[float, float, float]) -> Shape:
     shaft_length = 1.5*UL
     gripper_width = 0.7*UL
     gripper_length = 0.7*UL
@@ -125,7 +125,7 @@ def end_effector(color : Tuple[float, float, float]) -> Shape:
         ]
     )
 
-def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, color: Tuple[float, float, float]) -> Transform:
+def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, offset: Tuple[float, float, float], last_offset: Tuple[float, float, float], color: Tuple[float, float, float]) -> Transform:
     def get_z(d, theta):
         return np.matrix([
             [np.cos(theta), -np.sin(theta), 0, 0],
@@ -141,12 +141,23 @@ def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, colo
             [0, np.sin(alpha),  np.cos(alpha), 0],
             [0, 0            ,  0            , 1]
         ])
+    def get_offset_matrix(x, y, z, reverse=False):
+        if reverse:
+            x = -x
+            y = -y
+            z = -z
+        return np.matrix([
+            [1, 0, 0, x],
+            [0, 1, 0, y],
+            [0, 0, 1, z],
+            [0, 0, 0, 1],
+        ])
 
-    # Assume zero rotation in actuator, wrap geometry in a Transform frame with
-    # rotation at the end for simplicity
-    z = get_z(d, 0)
+    last_offset_matrix = get_offset_matrix(*last_offset, reverse=True)
+    z = get_z(d, theta)
     x = get_x(r, alpha)
-    t = z*x
+    offset_matrix = get_offset_matrix(*offset)
+    t = last_offset_matrix*z*x*offset_matrix
     zero_point = np.matrix([0, 0, 0, 1]).transpose()
     final_point = t*zero_point
     # Extract x, y, z from final point
@@ -165,7 +176,6 @@ def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, colo
 
     return Transform(
         DEF=f'l{idx}_link_body',
-        rotation=(0, 0, 1, theta),
         children=[
             Shape(
                 geometry=Extrusion(
@@ -192,7 +202,7 @@ def get_joint(type: JointType, color: Tuple[float, float, float]) -> _X3DChildNo
         # End effector should always be cyan
         return end_effector((0, 1, 1))
 
-def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_type: JointType, last_joint_type: JointType, color: Union[Tuple[float, float, float], None]=None) -> Tuple[Transform, Transform]:
+def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_type: JointType, last_joint_type: JointType, offset: Tuple[float, float, float], last_offset: Tuple[float, float, float], color: Union[Tuple[float, float, float], None]=None) -> Tuple[Transform, Transform]:
     if not color:
         color = rand_color()
     joint = get_joint(joint_type, color)
@@ -200,13 +210,25 @@ def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_typ
         DEF=f'l{idx}_alpha',
         rotation=(1, 0, 0, alpha),
         children=[
-            joint
+            Transform(
+                DEF=f'l{idx}_offset',
+                translation=offset,
+                children=[
+                    joint
+                ]
+            )
         ]
     )
     link = Transform(
         DEF=f'l{idx}_{last_joint_type.name}',
         children=[
-            get_link_body(idx, d, theta, r, alpha, color),
+            Transform(
+                DEF=f'l{idx}_link_offset',
+                translation=last_offset,
+                children=[
+                    get_link_body(idx, d, theta, r, alpha, offset, last_offset, color),
+                ]
+            ),
             Transform(
                 DEF=f'l{idx}_d',
                 translation=(0, 0, d),
@@ -231,8 +253,31 @@ def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_typ
     return link, link_alpha
 
 
-def base_model(base_joint : JointType) -> X3D:
+def base_model(base_joint: JointType, base_offset: Tuple[float, float, float]) -> Tuple[X3D, Transform]:
     base_color = (0.2, 0.2, 0.2)
+    base = Transform(
+        DEF="Base Joint Offset",
+        translation=base_offset,
+        children=[
+            Transform(
+                DEF="Base",
+                translation=(0, 0, -1*UL),
+                children=[
+                    Shape(
+                        geometry=Box(
+                            size=(10, 10, 0.1)
+                        ),
+                        appearance=Appearance(
+                            material=Material(
+                                diffuseColor=base_color
+                            )
+                        )
+                    ),
+                ]
+            ),
+            get_joint(base_joint, base_color)
+        ]
+    )
     return X3D(
         profile="Immersive", version="3.3",
         Scene=Scene(
@@ -244,26 +289,10 @@ def base_model(base_joint : JointType) -> X3D:
                     orientation=(-1, 0, 0, 0.2),
                     position=(0, 5, 15),
                 ),
-                Transform(
-                    DEF="Base",
-                    translation=(0, 0, -1),
-                    children=[
-                        Shape(
-                            geometry=Box(
-                                size=(10, 10, 0.1)
-                            ),
-                            appearance=Appearance(
-                                material=Material(
-                                    diffuseColor=base_color
-                                )
-                            )
-                        ),
-                    ]
-                ),
-                get_joint(base_joint, base_color)
+                base
             ]
         )
-    )
+    ), base
 
 
 def build_x3d(params : DhParams) -> X3D:
@@ -272,28 +301,34 @@ def build_x3d(params : DhParams) -> X3D:
     scale = params.scale
     colors = params.colors
     joint_types = params.joint_types
+    offsets = params.offsets
     base_joint = joint_types.pop(0)
+    base_offset = offsets.pop(0)
 
     if scale[0] is not None:
         update_ul(scale[0])
     else:
         reset_ul()
     joint_types.append(JointType.END_EFFECTOR)
-    model = base_model(base_joint)
+    # Assume last frame is always centered around end effector
+    offsets.append((0, 0, 0))
+    model, ptr = base_model(base_joint, base_offset)
     ptr = model.Scene
 
     last_joint_type = base_joint
-    for idx, (p, j, c, s) in enumerate(zip(parameters, joint_types, colors, scale)):
+    last_offset = base_offset
+    for idx, (p, j, c, s, o) in enumerate(zip(parameters, joint_types, colors, scale, offsets)):
         if s is not None:
             update_ul(s)
         else:
             update_ul(UL)
         # link 0 is the base "link"
         link_idx = idx + 1
-        link, new_ptr = get_link(link_idx, p.d, p.theta, p.r, p.alpha, j, last_joint_type, c)
+        link, new_ptr = get_link(link_idx, p.d, p.theta, p.r, p.alpha, j, last_joint_type, o, last_offset, c)
         ptr.children.append(link)
         ptr = new_ptr
         last_joint_type = j
+        last_offset = o
 
     # Return UL to original length
     reset_ul()

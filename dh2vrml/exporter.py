@@ -125,7 +125,7 @@ def end_effector(color : Tuple[float, float, float]) -> Shape:
         ]
     )
 
-def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, offset: Tuple[float, float, float], last_offset: Tuple[float, float, float], color: Tuple[float, float, float]) -> Transform:
+def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, offset: Tuple[float, float, float], last_offset: Tuple[float, float, float], color: Tuple[float, float, float], last_link=False) -> Transform:
     def get_z(d, theta):
         return np.matrix([
             [np.cos(theta), -np.sin(theta), 0, 0],
@@ -159,9 +159,14 @@ def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, offs
     offset_matrix = get_offset_matrix(*offset)
     t = last_offset_matrix*z*x*offset_matrix
     zero_point = np.matrix([0, 0, 0, 1]).transpose()
+    x_dir = np.matrix([1, 0, 0, 0]).transpose()
     final_point = t*zero_point
+    final_x_dir = t*x_dir
+    # Link should always appear to connect into the side of a joint
+    second_last_point = final_point - UL*final_x_dir
     # Extract x, y, z from final point
     final_point = tuple(final_point[0:3].transpose().tolist()[0])
+    second_last_point = tuple(second_last_point[0:3].transpose().tolist()[0])
     extrusion_spine = [
         (0, 0, 0),  # Start extrusion at center of joint
         (0, 0, 1.5*PREV_UL),  # Extrusion protrudes up in the Z axis out of joint
@@ -172,6 +177,9 @@ def get_link_body(idx: int, d: float, theta: float, r: float, alpha: float, offs
             (PREV_UL, 0, 1.5*PREV_UL),
             (PREV_UL, 0, 0),
         ])
+    # Last link connects to the end effector, not a joint
+    if not last_link:
+        extrusion_spine.append(second_last_point)
     extrusion_spine.append(final_point)
 
     return Transform(
@@ -205,6 +213,10 @@ def get_joint(type: JointType, color: Tuple[float, float, float]) -> _X3DChildNo
 def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_type: JointType, last_joint_type: JointType, offset: Tuple[float, float, float], last_offset: Tuple[float, float, float], color: Union[Tuple[float, float, float], None]=None) -> Tuple[Transform, Transform]:
     if not color:
         color = rand_color()
+    if joint_type == JointType.END_EFFECTOR:
+        last_link = True
+    else:
+        last_link = False
     joint = get_joint(joint_type, color)
     link_alpha = Transform(
         DEF=f'l{idx}_alpha',
@@ -226,7 +238,9 @@ def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_typ
                 DEF=f'l{idx}_link_offset',
                 translation=last_offset,
                 children=[
-                    get_link_body(idx, d, theta, r, alpha, offset, last_offset, color),
+                    get_link_body(
+                        idx, d, theta, r, alpha, offset, last_offset, color,
+                        last_link=last_link),
                 ]
             ),
             Transform(

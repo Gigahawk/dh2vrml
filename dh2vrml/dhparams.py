@@ -21,7 +21,8 @@ class DhParams:
                  params: List[DhParam],
                  joint_types: List[JointType],
                  colors: Union[List[Union[Tuple[float, float, float], None]], None]=None,
-                 scale: Union[List[Union[float, None]], None]=None):
+                 scale: Union[List[Union[float, None]], None]=None,
+                 offsets: Union[List[Tuple[float, float, float]], None]=None, ):
         self.params = params
         self.joint_types = joint_types
         if colors:
@@ -32,8 +33,21 @@ class DhParams:
             self.scale = scale
         else:
             self.scale = [1]*len(self.params)
-        assert (
-            len(self.params) == len(self.joint_types) == len(self.colors) == len(self.scale))
+
+        if offsets:
+            self.offsets = offsets
+        else:
+            self.offsets = [(0, 0, 0)]*len(self.params)
+
+        if not(
+                len(self.params) == len(self.joint_types)
+                == len(self.colors) == len(self.scale) == len(self.offsets)):
+            raise ValueError("All parameter lists must be the same length")
+
+        for idx, (jt, (x, y, z)) in enumerate(zip(self.joint_types, self.offsets)):
+            if jt == JointType.REVOLUTE and (x != 0 or y != 0):
+                raise ValueError(
+                    f"Joint {idx} is revolute but has a non zero x or y offset")
 
     @classmethod
     def from_yaml(cls, file_name: str):
@@ -54,6 +68,14 @@ class DhParams:
                 d["color"] = color
             else:
                 d["color"] = None
+
+            offset = d.get("offset")
+            if offset:
+                offset = offset.strip()
+                offset = tuple([float(c) for c in offset.split()])
+                d["offset"] = offset
+            else:
+                d["offset"] = None
 
             scale = d.get("scale")
             if not scale:
@@ -87,6 +109,10 @@ class DhParams:
             for p in param_list
         ]
         scale = [p.get("scale") for p in param_list]
-        return DhParams(params, joints, colors, scale)
+        offsets = [
+            tuple(p["offset"]) if p.get("offset") else (0, 0, 0)
+            for p in param_list
+        ]
+        return DhParams(params, joints, colors, scale, offsets)
 
 

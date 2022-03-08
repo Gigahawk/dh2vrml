@@ -3,6 +3,7 @@ import random
 from typing import Tuple, List, Union
 from dh2vrml.util import rand_color
 import numpy as np
+from scipy.spatial.transform import Rotation
 from x3d.x3d import (
     X3D,
     Scene, Viewpoint, NavigationInfo,
@@ -266,8 +267,48 @@ def get_link(idx: int, d: float, theta: float, r: float, alpha: float, joint_typ
     )
     return link, link_alpha
 
+def get_viewpoint(
+        camera_location: Tuple[float, float, float],
+        camera_center: Tuple[float, float, float],
+        ) -> Viewpoint:
+    # From https://github.com/numpy/numpy/issues/5228
+    def cart2sph(x, y, z):
+        hxy = np.hypot(x, y)
+        r = np.hypot(hxy, z)
+        el = np.arctan2(z, hxy)
+        az = np.arctan2(y, x)
+        return az, el, r
+    camera_location_m = np.matrix(camera_location)
+    camera_center_m = np.matrix(camera_center)
+    desired_orientation = camera_center_m - camera_location_m
+    azimuth, inclination, _ = cart2sph(*desired_orientation.tolist()[0])
 
-def base_model(base_joint: JointType, base_offset: Tuple[float, float, float]) -> Tuple[X3D, Transform]:
+    # Default orientation is straight down, we want to:
+    camera_rotvec = Rotation.from_euler(
+        'XYX',
+        [
+            np.pi/2, # Pan camera up to point towards positive Y in the fixed frame
+            (azimuth - np.pi/2), # Pan camera left towards camera center
+            inclination, # Pan camera up/down towards camera center
+        ]
+        ).as_rotvec()
+    camera_angle = np.linalg.norm(camera_rotvec)
+    camera_rotvec /= camera_angle
+    camera_orientation = tuple(camera_rotvec.tolist()) + (camera_angle,)
+
+    return Viewpoint(
+        position=camera_location,
+        centerOfRotation=camera_center,
+        orientation=camera_orientation
+    )
+
+
+def base_model(
+        base_joint: JointType,
+        base_offset: Tuple[float, float, float],
+        camera_location: Tuple[float, float, float],
+        camera_center: Tuple[float, float, float],
+        ) -> Tuple[X3D, Transform]:
     base_color = (0.2, 0.2, 0.2)
     base = Transform(
         DEF="Base Joint Offset",
@@ -299,17 +340,17 @@ def base_model(base_joint: JointType, base_offset: Tuple[float, float, float]) -
                 NavigationInfo(
                     DEF="ExamineMode"
                 ),
-                Viewpoint(
-                    orientation=(-1, 0, 0, 0.2),
-                    position=(0, 5, 15),
-                ),
+                get_viewpoint(camera_location, camera_center),
                 base
             ]
         )
     ), base
 
 
-def build_x3d(params : DhParams) -> X3D:
+def build_x3d(
+        params: DhParams,
+        camera_location: Union[Tuple[float, float, float], None]=(10, -10, 10),
+        camera_center: Union[Tuple[float, float, float], None]=(0, 0, 0)) -> X3D:
     global UL
     parameters = params.params
     scale = params.scale
@@ -326,7 +367,7 @@ def build_x3d(params : DhParams) -> X3D:
     joint_types.append(JointType.END_EFFECTOR)
     # Assume last frame is always centered around end effector
     offsets.append((0, 0, 0))
-    model, ptr = base_model(base_joint, base_offset)
+    model, ptr = base_model(base_joint, base_offset, camera_location, camera_center)
     ptr = model.Scene
 
     last_joint_type = base_joint

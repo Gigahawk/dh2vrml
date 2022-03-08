@@ -36,10 +36,15 @@ def get_params_from_file(f: str) -> DhParams:
         exit(1)
     return params
 
-def write_x3d_file(file_name: str, params: DhParams, validate: bool=True) -> str:
+def write_x3d_file(
+        file_name: str,
+        params: DhParams,
+        camera_location: Tuple[float, float, float],
+        camera_center: Tuple[float, float, float],
+        validate: bool=True) -> str:
     file_name = os.path.basename(file_name)
     name, ext = os.path.splitext(file_name)
-    model = build_x3d(params)
+    model = build_x3d(params, camera_location, camera_center)
     modelXML= model.XML()
     if validate:
         print("Checking XML serialization...")
@@ -65,19 +70,29 @@ def write_x3d_file(file_name: str, params: DhParams, validate: bool=True) -> str
     '--validate/--no-validate', default=True,
     help='Enable/disable validation of X3D output, (requires internet)'
 )
+@click.option(
+    '--camera-location', nargs=3, type=float, default=(10, -10, 10), show_default=True,
+    help='Location of the camera'
+)
+@click.option(
+    '--camera-center', nargs=3, type=float, default=(0, 0, 0), show_default=True,
+    help='Location the camera is pointed at'
+)
 def main(
-        file : Union[Tuple[str, ...], None],
-        stdin : Union[str, None],
-        validate : bool
+        file: Union[Tuple[str, ...], None],
+        stdin: Union[str, None],
+        validate: bool,
+        camera_location: Tuple[float, float, float],
+        camera_center: Tuple[float, float, float]
         ) -> List[str]:
     out = []
     if stdin:
         params = get_params_from_stdin(stdin)
-        out.append(write_x3d_file(str(uuid.uuid1()), params, validate))
+        out.append(write_x3d_file(str(uuid.uuid1()), params, camera_location, camera_center, validate))
 
     for f in file:
         params = get_params_from_file(f)
-        out.append(write_x3d_file(f, params, validate))
+        out.append(write_x3d_file(f, params, camera_location, camera_center, validate))
 
     return out
 

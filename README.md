@@ -30,7 +30,7 @@ dh2vrml -f <file_name>
         - Scale of the model can be set globally by only providing `scale` for the first set of parameters
 - `offset`: Location to render joint relative to coordinate system (X, Y, Z)
     - This value is NOT affected by `scale`
-    - Defaults to `(0, 0, 0)` 
+    - Defaults to `(0, 0, 0)`
     - Revolute joints can only have a Z offset
 
 ### Supported file types

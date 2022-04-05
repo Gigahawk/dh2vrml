@@ -11,7 +11,7 @@
   d: 2
   theta: 1
   r: 4
-  alpha: 3.14159265359
+  alpha_deg: 180
   color: [0, 0, 1]
   scale: 0.5
   offset: [0, 0, 1]

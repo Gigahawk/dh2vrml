@@ -19,6 +19,7 @@ dh2vrml -f <file_name>
 - `type`: Joint type, either `revolute` or `prismatic`
     - This refers to the joint at index `i - 1`, (i.e. the first joint is the base joint)
 - `d`, `theta`, `r`, `alpha`: DH parameters as specified on [Wikipedia](https://en.wikipedia.org/wiki/Denavit%E2%80%93Hartenberg_parameters)
+    - Angles are specified in radians, use  `theta_deg` or `alpha_deg` to specify values in degrees
 - `color`: Color of the joint and link at index `i`, in RGB format
     - Values are floats ranging from 0 to 1
     - The end effector is always colored `(0, 1, 1)`, (cyan)

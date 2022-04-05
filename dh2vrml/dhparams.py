@@ -3,6 +3,7 @@ from enum import Enum
 import pandas as pd
 from typing import List, Dict, Union, Tuple
 import yaml
+from math import pi
 
 class JointType(Enum):
     REVOLUTE = 1
@@ -95,6 +96,11 @@ class DhParams:
 
     @classmethod
     def from_dict_list(cls, param_list : List[Dict[str, Union[str, int, float]]]):
+        for p in param_list:
+            if "theta_deg" in p.keys():
+                p["theta"] = p["theta_deg"] * pi/180
+            if "alpha_deg" in p.keys():
+                p["alpha"] = p["alpha_deg"] * pi/180
         params = [
             DhParam(
                 p["d"], p["theta"], p["r"], p["alpha"])

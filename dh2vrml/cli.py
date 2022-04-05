@@ -4,9 +4,11 @@ import tempfile
 from typing import Tuple, Union, List
 import os
 import click
+from pathlib import Path
 
 from dh2vrml.dhparams import DhParams
 from dh2vrml.exporter import build_x3d
+from dh2vrml.exporter import generate_mdl as _generate_mdl
 
 def get_params_from_stdin(file_ext: str) -> DhParams:
     with tempfile.TemporaryDirectory() as tmp_name:
@@ -57,6 +59,16 @@ def write_x3d_file(
         f.write(modelXML)
     return modelXML
 
+
+def write_mdl_file(name: str, params: DhParams):
+    mdl_path = f"simulink_{name}.mdl"
+    print(f"Generating {mdl_path}")
+    mdl_content = _generate_mdl(name, params)
+    with open(mdl_path, "w") as f:
+        f.write(mdl_content)
+    return mdl_content
+
+
 @click.command()
 @click.option(
     '-f', '--file', default=None, multiple=True,
@@ -71,6 +83,10 @@ def write_x3d_file(
     help='Enable/disable validation of X3D output, (requires internet)'
 )
 @click.option(
+    '--generate-mdl/--no-generate-mdl', default=False,
+    help='Enable/disable generation of Simulink .mdl file with VR Sink already setup'
+)
+@click.option(
     '--camera-location', nargs=3, type=float, default=(10, -10, 10), show_default=True,
     help='Location of the camera'
 )
@@ -82,17 +98,27 @@ def main(
         file: Union[Tuple[str, ...], None],
         stdin: Union[str, None],
         validate: bool,
+        generate_mdl: bool,
         camera_location: Tuple[float, float, float],
         camera_center: Tuple[float, float, float]
         ) -> List[str]:
     out = []
     if stdin:
+        name = str(uuid.uuid1())
         params = get_params_from_stdin(stdin)
-        out.append(write_x3d_file(str(uuid.uuid1()), params, camera_location, camera_center, validate))
+        out.append(write_x3d_file(name, params, camera_location, camera_center, validate))
+        if generate_mdl:
+            mdl_content = write_mdl_file(name, params)
+            out.append(mdl_content)
 
     for f in file:
         params = get_params_from_file(f)
-        out.append(write_x3d_file(f, params, camera_location, camera_center, validate))
+        modelXML = write_x3d_file(f, params, camera_location, camera_center, validate)
+        out.append(modelXML)
+        if generate_mdl:
+            name = Path(f).stem
+            mdl_content = write_mdl_file(name, params)
+            out.append(mdl_content)
 
     return out
 

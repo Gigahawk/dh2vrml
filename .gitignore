@@ -4,3 +4,5 @@ dist
 **.tar.gz
 **.whl
 **.x3d
+**.mdl
+**.autosave

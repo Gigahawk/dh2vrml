@@ -2,6 +2,7 @@ from math import inf
 import random
 from typing import Tuple, List, Union
 from dh2vrml.util import rand_color
+from dh2vrml.mdl_template import TEMPLATE
 import numpy as np
 from scipy.spatial.transform import Rotation
 from x3d.x3d import (
@@ -355,8 +356,8 @@ def build_x3d(
     parameters = params.params
     scale = params.scale
     colors = params.colors
-    joint_types = params.joint_types
-    offsets = params.offsets
+    joint_types = params.joint_types.copy()
+    offsets = params.offsets.copy()
     base_joint = joint_types.pop(0)
     base_offset = offsets.pop(0)
 
@@ -388,3 +389,34 @@ def build_x3d(
     # Return UL to original length
     reset_ul()
     return model
+
+def generate_mdl(name: str, params: DhParams) -> str:
+    """Generate a Simulink .mdl file with a VR sink containing the model
+
+    Args:
+    - name: name of the .x3d model (without extension)
+    - params: robot parameters
+
+    Returns:
+    Simulink model template
+    """
+    revolute_template = "l{j_idx}_REVOLUTE.rotation.4.1.1.double"
+    prismatic_template = "l{j_idx}_PRISMATIC.translation.3.1.1.double"
+
+    x3d_path = f"{name}.x3d"
+    simulink_name = f"simulink_{name}"
+
+    fields = []
+    for idx, joint_type in enumerate(params.joint_types):
+        print(joint_type)
+        joint_idx = idx + 1
+        if joint_type == JointType.REVOLUTE:
+            fields.append(revolute_template.format(j_idx=joint_idx))
+        elif joint_type == JointType.PRISMATIC:
+            fields.append(prismatic_template.format(j_idx=joint_idx))
+    fields = "#".join(fields)
+    mdl_template = TEMPLATE.format(
+        NAME=simulink_name, FIELDS=fields, X3DPATH=x3d_path)
+    return mdl_template
+
+

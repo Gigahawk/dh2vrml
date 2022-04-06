@@ -121,4 +121,25 @@ class DhParams:
         ]
         return DhParams(params, joints, colors, scale, offsets)
 
-
+    def to_csv(self):
+        columns = [
+            "type",
+            "d", "theta", "r", "alpha",
+            "color",
+            "scale",
+            "offset"
+        ]
+        rows = []
+        for p, j, c, s, o in zip(
+                self.params, self.joint_types, self.colors, self.scale, self.offsets):
+            row = pd.DataFrame(
+                [[
+                    j.name.lower(),
+                    p.d, p.theta, p.r, p.alpha,
+                    " ".join((str(x) for x in c)) if c else "",
+                    s,
+                    " ".join((str(x) for x in o))
+                ]], columns=columns)
+            rows.append(row)
+        df = pd.concat(rows)
+        return df.to_csv(index=False)
